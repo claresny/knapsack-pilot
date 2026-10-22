@@ -94,14 +94,18 @@ p{margin:0}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 
 /* board */
-.boardhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.boardhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+.hright{display:flex;align-items:center;gap:8px;margin-left:auto}
+.sortsel{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--muted);white-space:nowrap}
+.dd{position:relative;display:inline-block}
+.dd::after{content:"";position:absolute;right:13px;top:50%;width:7px;height:7px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.dd select{appearance:none;-webkit-appearance:none;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 36px 7px 12px;font-weight:600;font-size:15px;cursor:pointer}
+.dd select:hover{border-color:var(--ink)}
 .boardhead p{color:var(--muted)}
 .filters{display:flex;flex-wrap:wrap;gap:8px}
 .chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px 7px 10px;font-weight:600;font-size:15px}
 .chip svg{width:18px;height:18px;color:var(--c,var(--ink))}
-.chip[data-f="all"],.chip[data-s]{padding-left:14px}
-.ctrls{display:flex;flex-direction:column;gap:8px;min-width:0}
-.sortlbl{align-self:center;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.chip[data-f="all"]{padding-left:14px}
 .chip:hover{border-color:var(--ink)}
 .chip[aria-pressed="true"]{border-color:var(--ink);background:var(--cs,var(--bg));box-shadow:inset 0 0 0 1px var(--ink)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:22px}
@@ -213,7 +217,7 @@ details[open] summary{margin-bottom:12px}
   <section class="sheet" id="startView"></section>
 
   <section id="boardView" hidden style="display:flex;flex-direction:column;gap:14px">
-    <div class="boardhead"><div class="ctrls"><div class="filters" id="filters" role="group" aria-label="Show tasks"><button class="chip" data-f="all" aria-pressed="true">All</button><button class="chip t-label" data-f="label" aria-pressed="false"></button><button class="chip t-note" data-f="note" aria-pressed="false"></button><button class="chip t-pump" data-f="pump" aria-pressed="false"></button></div><div class="filters" id="sorts" role="group" aria-label="Sort tasks"><span class="sortlbl">Sort</span><button class="chip" data-s="board" aria-pressed="true">Default</button><button class="chip" data-s="desc" aria-pressed="false">Most points</button><button class="chip" data-s="asc" aria-pressed="false">Fewest points</button></div></div><button class="btn link" id="endEarly">End session</button></div>
+    <div class="boardhead"><div class="filters" id="filters" role="group" aria-label="Show tasks"><button class="chip" data-f="all" aria-pressed="true">All</button><button class="chip t-label" data-f="label" aria-pressed="false"></button><button class="chip t-note" data-f="note" aria-pressed="false"></button><button class="chip t-pump" data-f="pump" aria-pressed="false"></button></div><div class="hright"><label class="sortsel"><span>Sort by</span><span class="dd"><select id="sort"><option value="board">Default</option><option value="asc">Points: Low to High</option><option value="desc">Points: High to Low</option></select></span></label><button class="btn link" id="endEarly">End session</button></div></div>
     <div class="grid" id="grid"></div>
     <div class="confirm" id="confirm" hidden></div>
   </section>
@@ -513,7 +517,7 @@ function restore(saved){
 function showBoard(){
   $("startView").hidden=true;$("bar").hidden=false;$("boardView").hidden=false;
   document.querySelectorAll("#filters .chip").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.f===S.filter)));
-  document.querySelectorAll("#sorts .chip").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.s===S.sort)));
+  $("sort").value=S.sort;
   renderAll();window.scrollTo({top:0});
 }
 
@@ -552,7 +556,7 @@ function renderEnd(){
 function renderAll(){renderBar();renderGrid();renderConfirm()}
 document.querySelectorAll("#filters .chip[data-f]").forEach(b=>{const k=b.dataset.f;if(M[k])b.innerHTML=ICON[k]+M[k].name});
 $("filters").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b||S.status!=="in_progress")return;S.filter=b.dataset.f;document.querySelectorAll("#filters .chip").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));logE("filter",null,{type:S.filter});renderGrid()});
-$("sorts").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b||S.status!=="in_progress")return;S.sort=b.dataset.s;document.querySelectorAll("#sorts .chip").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));logE("sort",null,{order:S.sort});renderGrid()});
+$("sort").addEventListener("change",e=>{if(S.status!=="in_progress"){e.target.value=S.sort;return}S.sort=e.target.value;logE("sort",null,{order:S.sort});renderGrid()});
 $("grid").addEventListener("click",e=>{const b=e.target.closest(".card");if(!b||S.active||S.status!=="in_progress")return;const c=S.cards.find(x=>x.id===b.dataset.id);if(!c||c.status!=="open")return;S.selected=c.id;logE("preview",c,{pts:c.pts});renderGrid();renderConfirm()});
 $("endEarly").onclick=()=>{const b=$("endEarly");if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Click again to end";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent="End session"}},4000)}else finish("ended_early")};
 setInterval(()=>{if(S.status==="in_progress")$("clock").textContent=fmtTime(elapsed())},500);
