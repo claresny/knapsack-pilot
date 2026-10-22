@@ -292,11 +292,11 @@ function logE(event,card,detail){S.log.push({t:+elapsed().toFixed(2),event,card:
 
 /* ---------- local copy, so a reload resumes instead of restarting ---------- */
 const keyFor=pid=>"clinic-run-"+pid;
-/* no ID in the link: make one and keep it, so a reload resumes the same run (?reset=1 forgets it) */
+/* no ID in the link: make one per browser tab, so a reload resumes the same run but a new tab starts fresh (?reset=1 forgets it) */
 const AUTO_KEY="clinic-auto-pid";
-if(P.has("reset")){try{localStorage.removeItem(AUTO_KEY)}catch(e){}}
-function storedAutoPid(){try{return localStorage.getItem(AUTO_KEY)||""}catch(e){return ""}}
-function autoPid(){let id=storedAutoPid();if(!id){id="P-"+Date.now().toString(36).slice(-4)+Math.random().toString(36).slice(2,6);try{localStorage.setItem(AUTO_KEY,id)}catch(e){}}return id}
+if(P.has("reset")){try{sessionStorage.removeItem(AUTO_KEY)}catch(e){}}
+function storedAutoPid(){try{return sessionStorage.getItem(AUTO_KEY)||""}catch(e){return ""}}
+function autoPid(){let id=storedAutoPid();if(!id){id="P-"+Date.now().toString(36).slice(-4)+Math.random().toString(36).slice(2,6);try{sessionStorage.setItem(AUTO_KEY,id)}catch(e){}}return id}
 function persist(){if(!S.participant)return;try{localStorage.setItem(keyFor(S.participant),JSON.stringify({...S,active:null,selected:null}))}catch(e){}}
 function loadSaved(pid){try{const raw=localStorage.getItem(keyFor(pid));return raw?JSON.parse(raw):null}catch(e){return null}}
 const _logE=logE;
