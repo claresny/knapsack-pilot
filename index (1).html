@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Clinic Task Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+
+/* Layout: hospital wayfinding signage. Solid color blocks per task type, big numerals, one action per screen. */
+:root{
+  --bg:#EEF0F3; --surface:#FFFFFF; --ink:#0B0D12; --muted:#5A6170; --line:#D7DBE1;
+  --label:#2350E0; --label-ink:#FFFFFF; --note:#F5B700; --note-ink:#0B0D12; --pump:#0E9A68; --pump-ink:#FFFFFF;
+  --cross:#E0262B; --good:#0E9A68; --bad:#D42A2F; --bad-soft:#FBE3E3; --good-soft:#DDF3EA;
+  --btn:#0B0D12; --btn-ink:#FFFFFF;
+  --label-c:#2350E0; --label-s:#E8EDFD; --note-c:#A87A00; --note-s:#FCF1CF; --pump-c:#0E8A5E; --pump-s:#DCF2E9;
+  --sans:"Archivo","Helvetica Neue",Arial,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B0D11; --surface:#161A21; --ink:#F2F4F7; --muted:#9AA3B2; --line:#2A303A;
+    --label:#6F8DFF; --label-ink:#0B0D12; --note:#FFC933; --note-ink:#0B0D12; --pump:#34D399; --pump-ink:#0B0D12;
+    --cross:#FF5A5F; --good:#34D399; --bad:#FF6B70; --bad-soft:#3A1C1E; --good-soft:#123528;
+    --btn:#F2F4F7; --btn-ink:#0B0D12; color-scheme:dark;
+    --label-c:#8BA3FF; --label-s:#1E2648; --note-c:#FFC933; --note-s:#3A2F0E; --pump-c:#34D399; --pump-s:#11342A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B0D11; --surface:#161A21; --ink:#F2F4F7; --muted:#9AA3B2; --line:#2A303A;
+  --label:#6F8DFF; --label-ink:#0B0D12; --note:#FFC933; --note-ink:#0B0D12; --pump:#34D399; --pump-ink:#0B0D12;
+  --cross:#FF5A5F; --good:#34D399; --bad:#FF6B70; --bad-soft:#3A1C1E; --good-soft:#123528;
+  --btn:#F2F4F7; --btn-ink:#0B0D12; color-scheme:dark;
+    --label-c:#8BA3FF; --label-s:#1E2648; --note-c:#FFC933; --note-s:#3A2F0E; --pump-c:#34D399; --pump-s:#11342A;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.4}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--label);outline-offset:2px}
+h1,h2{text-wrap:balance;margin:0}
+p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--surface);border-bottom:2px solid var(--ink);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar-in{max-width:1040px;margin:0 auto;display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center;padding-block:10px}
+.mark{display:flex;align-items:center;gap:8px;font-weight:800;font-size:20px;letter-spacing:-.01em}
+.mark i{width:22px;height:22px;background:var(--cross);clip-path:polygon(33% 0,67% 0,67% 33%,100% 33%,100% 67%,67% 67%,67% 100%,33% 100%,33% 67%,0 67%,0 33%,33% 33%)}
+.prog{display:flex;align-items:center;gap:12px;min-width:0}
+.prog b{font-size:22px;font-weight:800;white-space:nowrap}
+.prog b small{font-size:14px;font-weight:600;color:var(--muted)}
+.track{flex:1;height:12px;background:var(--bg);border:2px solid var(--ink);border-radius:6px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--ink);transition:width .4s ease}
+.clock{font-family:var(--mono);font-size:20px;font-weight:700}
+
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 64px;display:flex;flex-direction:column;gap:20px}
+
+/* start / end */
+.sheet{display:flex;flex-direction:column;gap:22px;max-width:640px}
+.sheet h1{font-size:44px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.sheet .lead{font-size:19px;max-width:44ch}
+.legend{display:flex;flex-direction:column;gap:8px}
+.legend div{display:flex;align-items:center;gap:12px;font-size:17px}
+.sw{width:40px;height:40px;border-radius:8px;display:grid;place-items:center;flex:0 0 40px}
+.sw svg{width:24px;height:24px}
+.t-label{--c:var(--label-c);--cs:var(--label-s)} .t-note{--c:var(--note-c);--cs:var(--note-s)} .t-pump{--c:var(--pump-c);--cs:var(--pump-s)}
+.sw{background:var(--cs);color:var(--c)}
+.aitag{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:12px;font-weight:700;border:2px solid currentColor;border-radius:5px;padding:1px 6px;letter-spacing:.04em}
+.idform{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.idform input{font-family:var(--mono);font-size:20px;padding:12px 14px;border:2px solid var(--ink);border-radius:8px;background:var(--surface);width:220px;max-width:100%}
+.err{color:var(--bad);font-weight:600;min-height:22px}
+.big{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;background:var(--ink);border:2px solid var(--ink);border-radius:10px;overflow:hidden}
+.big div{background:var(--surface);padding:14px}
+.big span{display:block;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.big b{font-size:34px;font-weight:800}
+.saved{font-weight:600;padding:12px 14px;border-radius:8px}
+.saved.ok{background:var(--good-soft)} .saved.warn{background:var(--bad-soft)} .saved.wait{background:var(--surface);color:var(--muted)}
+
+/* buttons */
+.btn{border:2px solid var(--ink);background:var(--surface);border-radius:8px;padding:11px 20px;font-weight:800;font-size:16px}
+.btn.go{background:var(--btn);color:var(--btn-ink);border-color:var(--btn)}
+.btn.ai{display:inline-flex;align-items:center;gap:8px}
+.btn.ai svg{width:18px;height:18px}
+.btn.link{border-color:transparent;background:transparent;color:var(--muted);font-weight:600;padding-inline:8px}
+.btn.link.armed{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* board */
+.boardhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.boardhead p{color:var(--muted)}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px 7px 10px;font-weight:600;font-size:15px}
+.chip svg{width:18px;height:18px;color:var(--c,var(--ink))}
+.chip[data-f="all"]{padding-left:14px}
+.chip:hover{border-color:var(--ink)}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--cs,var(--bg));box-shadow:inset 0 0 0 1px var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:22px}
+.card{position:relative;padding:22px 16px 18px;border:1.5px solid var(--line);border-top:5px solid var(--c);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;transition:border-color .12s ease,transform .12s ease}
+.card:hover{border-color:var(--ink);border-top-color:var(--c);transform:translateY(-2px)}
+.card .ic{width:92px;height:92px;border-radius:50%;background:var(--cs);color:var(--c);display:grid;place-items:center;margin-bottom:8px}
+.card .ic svg{width:52px;height:52px;stroke-width:1.8}
+.card .nm{font-size:17px;font-weight:800}
+.card .pts{font-size:18px;font-weight:600}
+.card .sz{font-size:13px;color:var(--muted)}
+.card .aitag{font-size:11px;color:var(--muted);padding:0 5px;margin-top:4px}
+.card.done,.card.abandoned{cursor:default}
+.card.done:hover,.card.abandoned:hover{transform:none;border-color:var(--line);border-top-color:var(--c)}
+.card.done>*,.card.abandoned>*{opacity:.2}
+.card .stamp{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:.08em;opacity:1}
+.card.done .stamp{color:var(--good)} .card.abandoned .stamp{color:var(--muted)}
+.card.sel{border-color:var(--ink);border-top-color:var(--c);box-shadow:0 0 0 3px var(--ink)}
+
+.confirm{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:5;background:var(--surface);border:2px solid var(--ink);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.confirm .who{display:flex;gap:12px;align-items:center;min-width:0}
+.confirm b{font-size:18px}
+.confirm p{color:var(--muted);font-size:14px}
+
+/* task */
+.task{background:var(--surface);border:2px solid var(--ink);border-radius:12px;overflow:hidden}
+.task .blk{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;gap:12px;background:var(--cs);border-bottom:3px solid var(--c)}
+.task .blk h2 svg{color:var(--c)}
+.task .blk h2{font-size:24px;font-weight:800;display:flex;align-items:center;gap:10px}
+.task .blk h2 svg{width:26px;height:26px}
+.task .blk .pts{font-size:30px;font-weight:800}
+.task-body{padding:18px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.order{font-size:18px;font-weight:600;max-width:60ch}
+.imgwrap{overflow-x:auto;max-width:100%}
+.scan{display:block;border-radius:6px;border:1px solid var(--line);user-select:none;-webkit-user-select:none}
+.codein{width:100%;max-width:660px;font-family:var(--mono);font-size:22px;letter-spacing:.12em;text-transform:uppercase;padding:12px 14px;border:2px solid var(--ink);border-radius:8px;background:var(--surface)}
+.numin{width:120px;font-family:var(--mono);font-size:24px;padding:10px 12px;border:2px solid var(--ink);border-radius:8px;background:var(--surface)}
+.tip{display:inline-flex;align-items:center;gap:10px;border:2px dashed var(--ink);border-radius:8px;padding:6px 6px 6px 12px;font-weight:700}
+.tip button{border:0;border-radius:6px;background:var(--btn);color:var(--btn-ink);padding:5px 12px;font-weight:800}
+.fb{min-height:22px;font-weight:600}
+.fb.bad{color:var(--bad)} .fb.info{color:var(--muted)}
+.lines{display:flex;flex-direction:column;gap:8px;max-width:720px}
+.line{display:grid;grid-template-columns:120px minmax(0,1fr) 86px 18px;gap:14px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
+.line .lbl{font-weight:800}
+.line .lbl span{display:block;font-family:var(--mono);font-size:15px;font-weight:500;color:var(--muted)}
+.line input[type=range]{width:100%;accent-color:var(--pump)}
+.line output{font-family:var(--mono);text-align:right}
+.led{width:16px;height:16px;border-radius:50%;background:var(--bad)}
+.led.on{background:var(--good)}
+.hint{font-size:14px;color:var(--muted)}
+
+/* researcher */
+.rbtn{align-self:flex-start;font-size:13px}
+.panel{background:var(--surface);border:2px solid var(--ink);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font-size:22px;font-weight:800}
+.panel .sub{color:var(--muted);font-size:14px}
+.panel code{font-family:var(--mono);font-weight:700;background:var(--bg);padding:1px 6px;border-radius:4px}
+.tbl{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td.d{white-space:normal;font-family:var(--mono);font-size:12px;color:var(--muted);word-break:break-all}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+.dot.ok{background:var(--good)} .dot.run{background:var(--note)} .dot.end{background:var(--muted)}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font-weight:800}
+details[open] summary{margin-bottom:12px}
+.f2{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.field input{border:2px solid var(--line);border-radius:6px;padding:7px 9px;background:var(--surface);color:var(--ink)}
+.check{display:flex;gap:8px;align-items:center;font-size:14px}
+.export{width:100%;min-height:90px;font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:8px}
+
+@media (max-width:700px){
+  .bar-in{grid-template-columns:1fr auto;gap:8px 12px}
+  .prog{grid-column:1/-1;grid-row:2}
+  .sheet h1{font-size:34px}
+  .line{grid-template-columns:80px minmax(0,1fr) 70px 14px;gap:8px}
+  .codein{font-size:18px}
+  .big b{font-size:26px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.setupwarn{background:var(--bad-soft);color:var(--bad);font-weight:600;padding:10px max(16px,env(safe-area-inset-left,0px));text-align:center}
+.codebox{font-family:var(--mono);font-size:40px;font-weight:700;letter-spacing:.14em;padding:14px 20px;border:2px dashed var(--ink);border-radius:10px;align-self:flex-start;user-select:all;-webkit-user-select:all}
+</style>
+</head>
+<body>
+<div class="setupwarn" id="setupWarn" hidden>Test mode: results are not being saved. Add your Google Sheet web app link to CONFIG at the top of the script.</div>
+
+<header class="bar" id="bar" hidden>
+  <div class="bar-in">
+    <div class="mark"><i></i>Clinic</div>
+    <div class="prog"><b class="num" id="ptsText">0 <small>/ 100 pts</small></b><div class="track" role="progressbar" aria-label="Points toward goal" aria-valuemin="0" aria-valuemax="100" id="track"><div class="fill" id="fill"></div></div></div>
+    <div class="clock num" id="clock" aria-label="Time elapsed">0:00</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="sheet" id="startView"></section>
+
+  <section id="boardView" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div class="boardhead"><div class="filters" id="filters" role="group" aria-label="Show tasks"><button class="chip" data-f="all" aria-pressed="true">All</button><button class="chip t-label" data-f="label" aria-pressed="false"></button><button class="chip t-note" data-f="note" aria-pressed="false"></button><button class="chip t-pump" data-f="pump" aria-pressed="false"></button></div><button class="btn link" id="endEarly">End session</button></div>
+    <div class="grid" id="grid"></div>
+    <div class="confirm" id="confirm" hidden></div>
+  </section>
+
+  <section class="task" id="taskView" hidden></section>
+  <section class="sheet" id="endView" hidden></section>
+</main>
+
+<script>
+(function(){
+/* ======================================================================
+   STUDY SETTINGS: edit these lines before you upload the page.
+   ====================================================================== */
+const CONFIG={
+  // Paste the Web app URL from Google Apps Script between the quotes.
+  SHEET_URL:"https://script.google.com/macros/s/AKfycbzschqdQhSZ7HzvgA7ylfeg-wtRd0l3JMUAUlLA-F_k2o4Gc5s7c96MsC1eO2bISyc/exec",
+  TARGET:100,          // points needed to finish
+  SEED:7,              // board layout; keep the same for every participant
+  WRONG_WAIT_S:0,      // seconds locked out after a wrong answer
+  AI_DELAY_S:3,        // seconds the AI "works" before answering
+  // Optional: where to send people when they finish, if the link has no &return=
+  DEFAULT_RETURN_URL:""
+};
+/* ====================================================================== */
+
+const $=id=>document.getElementById(id);
+const ICON={
+  label:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v4l3 3v10a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V10l3-3z"/><path d="M6 13h12M6 17h12"/></svg>',
+  note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="1.5"/><path d="M9 4V3h6v1"/><path d="M8.5 10h7M8.5 13.5h7M8.5 17h4"/></svg>',
+  pump:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8v6a4 4 0 0 1-8 0z"/><path d="M12 13v3"/><path d="M12 16c0 3-3 3-3 5"/></svg>',
+  ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>'
+};
+const M={
+  label:{name:"Label",long:"Copy a label",ask:"Ask AI to read it",submit:"Submit code",legend:"Copy a handwritten specimen code"},
+  note:{name:"Chart",long:"Count a letter",ask:"Ask AI to count",submit:"Submit count",legend:"Count one letter in a patient note"},
+  pump:{name:"Pump",long:"Set the pump",ask:"Ask AI to set it",submit:"Submit rates",legend:"Set each IV line to its exact rate"}
+};
+
+const SENTENCES=["Patient reports a mild headache that began two days ago.","Vital signs were stable throughout the morning shift.","Blood pressure was rechecked after the patient rested for ten minutes.","The wound dressing was changed and the site looked clean.","Family members visited in the afternoon and asked about discharge.","Physical therapy walked with the patient twice along the hallway.","Appetite improved and most of the lunch tray was finished.","The patient slept well overnight with no calls for assistance.","Lab results from this morning were reviewed with the attending.","Oxygen was weaned to room air without difficulty.","The IV site in the left forearm shows no redness or swelling.","Pain was rated four out of ten after the evening dose.","Discharge teaching was started and written materials were provided.","The patient asked for an extra blanket and the room was warmed.","A follow-up appointment was scheduled with the clinic next week.","Breath sounds were clear on both sides during the exam.","The patient was repositioned every two hours to protect the skin.","Fluid intake and output were recorded at the end of the shift.","Mild nausea was noted after breakfast and resolved within an hour.","The pharmacy confirmed the updated medication list.","The patient walked to the bathroom with standby assistance.","Temperature remained normal through the night.","A social worker met with the family to discuss home support.","The call light was placed within easy reach of the bed.","Hand hygiene was performed before and after each contact.","The patient's daughter will provide transport home.","A small bruise was observed on the right upper arm.","The surgical team rounded early and reviewed the plan of care.","Ice chips were offered and tolerated well.","Night staff reported the patient was calm and cooperative.","The bed alarm was activated as a fall precaution.","Weight was recorded this morning before breakfast.","The patient voiced understanding of the new diet instructions.","Compression stockings were applied to both legs.","Glucose was checked before each meal as ordered."];
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function paragraph(words,rng){const out=[];let n=0;const pool=SENTENCES.slice();while(n<words&&pool.length){const s=pool.splice(Math.floor(rng()*pool.length),1)[0];out.push(s);n+=s.split(" ").length}return out.join(" ")}
+const CHARSET="ABCDEFGHJKLMNPQRTUVWXYZ2346789";
+const LOOKALIKE={B:"8",8:"B",G:"6",6:"G",Z:"2",2:"Z",U:"V",V:"U",P:"R",R:"P",E:"F",F:"E",M:"N",N:"M",T:"7",7:"T",A:"4",4:"A",C:"G",D:"B",H:"N",K:"X",X:"K",Y:"V",W:"M",L:"J",J:"L",Q:"D",3:"8",9:"8"};
+const fmtTime=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const esc=s=>String(s).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+
+
+const P=new URLSearchParams(location.search);
+const URL_PID=(P.get("pid")||P.get("PROLIFIC_PID")||P.get("participant")||"").trim().slice(0,80);
+const URL_ARM=(P.get("arm")||location.hash.replace("#","")).toLowerCase();
+const RETURN=P.get("return")||CONFIG.DEFAULT_RETURN_URL||"";
+const S={cfg:{target:CONFIG.TARGET,seed:CONFIG.SEED,lock:CONFIG.WRONG_WAIT_S,delay:CONFIG.AI_DELAY_S},arm:null,armSource:null,participant:"",sid:null,code:null,startedAt:null,cards:[],points:0,start:null,endAt:null,log:[],selected:null,active:null,status:"not_started",picks:0,filter:"all"};
+const net={busy:false,again:false,timer:null,state:CONFIG.SHEET_URL?"idle":"off"};
+
+function assignArm(){if(URL_ARM==="ai"||URL_ARM==="noai"){S.arm=URL_ARM==="ai"?"all":"none";S.armSource="link"}else{S.arm=Math.random()<.5?"none":"all";S.armSource="random"}}
+const aiOn=()=>S.arm==="all";
+
+/* board */
+function buildCards(){
+  const rng=mulberry32(Number(S.cfg.seed)||1);const cards=[];let k=0;
+  [[8,1,6],[16,2,14],[28,3,28],[8,1,6],[16,2,14],[28,3,28]].forEach(([len,lvl,pts])=>{let code="";for(let i=0;i<len;i++)code+=CHARSET[Math.floor(rng()*CHARSET.length)];cards.push({id:"L"+(++k),type:"label",code,len,lvl,pts,imgSeed:Math.floor(rng()*1e9)})});
+  const letters="etaonsr";
+  [[40,1,10],[90,2,22],[160,3,40],[40,1,10],[90,2,22],[160,3,40]].forEach(([w,lvl,pts])=>{const text=paragraph(w,rng);const letter=letters[Math.floor(rng()*letters.length)];cards.push({id:"N"+(++k),type:"note",text,words:text.split(" ").length,letter,answer:(text.toLowerCase().match(new RegExp(letter,"g"))||[]).length,lvl,pts})});
+  [[3,1],[6,2],[10,3]].forEach(([n,lvl])=>[1,0.1].forEach(prec=>{const pts=Math.round(n*1.3*(prec===1?1:2.3));const targets=Array.from({length:n},()=>{let v=5+rng()*90;if(Math.abs(v-50)<3)v+=8;return prec===1?Math.round(v):Math.round(v*10)/10});cards.push({id:"P"+(++k),type:"pump",n,prec,targets,lvl,pts})}));
+  for(let i=cards.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]]}
+  cards.forEach((c,i)=>{c.order=i;c.status="open";c.time=null;c.aiUses=0;c.attempts=0;c.pick=null});
+  return cards;
+}
+const labelErrors=c=>Math.max(1,Math.round(c.len*0.1));
+const noteAcc=c=>Math.min(.95,Math.max(.35,.95-.0035*c.words));
+function reliability(c){if(c.type==="label")return 2;if(c.type==="note"){const a=noteAcc(c);return a>.75?3:a>.55?2:1}return c.prec===1?3:1}
+const relWord=c=>["","often wrong","sometimes wrong","usually right"][reliability(c)];
+function sizeWord(c){if(c.type!=="pump")return ["","Short","Medium","Long"][c.lvl];return c.n+" lines"+(c.prec<1?", decimals":"")}
+
+function elapsed(){return S.start?((S.endAt||Date.now())-S.start)/1000:0}
+function logE(event,card,detail){S.log.push({t:+elapsed().toFixed(2),event,card:card?card.id:"",type:card?card.type:"",detail:detail||null});markDirty()}
+
+
+/* ---------- local copy, so a reload resumes instead of restarting ---------- */
+const keyFor=pid=>"clinic-run-"+pid;
+function persist(){if(!S.participant)return;try{localStorage.setItem(keyFor(S.participant),JSON.stringify({...S,active:null,selected:null}))}catch(e){}}
+function loadSaved(pid){try{const raw=localStorage.getItem(keyFor(pid));return raw?JSON.parse(raw):null}catch(e){return null}}
+const _logE=logE;
+logE=function(event,card,detail){_logE(event,card,detail);persist()};
+
+/* ---------- sending to the Google Sheet ---------- */
+function payload(){
+  const cs=S.cards,ev=S.log,cnt=e=>ev.filter(x=>x.event===e).length,dt=t=>cs.filter(c=>c.status==="done"&&c.type===t).length;
+  const typ=t=>t==="note"?"chart":t;
+  return{
+    session:{session_id:S.sid,participant:S.participant,arm:S.arm==="all"?"ai":"noai",arm_source:S.armSource,status:S.status,started_at:S.startedAt,updated_at:new Date().toISOString(),points:S.points,goal:S.cfg.target,elapsed_s:+elapsed().toFixed(1),tasks_done:cs.filter(c=>c.status==="done").length,tasks_skipped:cs.filter(c=>c.status==="abandoned").length,labels_done:dt("label"),charts_done:dt("note"),pumps_done:dt("pump"),ai_requests:cnt("ai_request"),ai_accepts:cnt("ai_accept"),failed_submits:cnt("submit_fail"),previews:cnt("preview"),filter_clicks:cnt("filter"),reloads:cnt("resume"),completion_code:S.code,seed:S.cfg.seed,ai_delay_s:S.cfg.delay,wrong_wait_s:S.cfg.lock,screen_width:window.innerWidth,user_agent:navigator.userAgent.slice(0,200)},
+    tasks:cs.map(c=>({task_id:c.id,type:typ(c.type),size:["","short","medium","long"][c.lvl],points:c.pts,decimals:c.type==="pump"?(c.prec<1):"",board_position:c.order+1,pick_order:c.pick==null?"":c.pick,status:c.status==="abandoned"?"skipped":c.status==="done"?"done":(c.pick!=null?"started":"not_picked"),time_s:c.time==null?"":+c.time.toFixed(2),ai_uses:c.aiUses,attempts:c.attempts})),
+    events:ev.map((e,i)=>({idx:i,t:e.t,event:e.event,task_id:e.card,type:typ(e.type),detail:e.detail?JSON.stringify(e.detail):""}))
+  };
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function flush(){if(!S.sid||!CONFIG.SHEET_URL)return;clearTimeout(net.timer);net.timer=setTimeout(send,1500)}
+function markDirty(){flush()}
+async function send(){
+  clearTimeout(net.timer);
+  if(!S.sid||!CONFIG.SHEET_URL)return false;
+  if(net.busy){net.again=true;return false}
+  net.busy=true;net.again=false;net.state="saving";
+  let ok=false;
+  for(let i=0;i<3&&!ok;i++){
+    try{const r=await fetch(CONFIG.SHEET_URL,{method:"POST",body:JSON.stringify(payload())});const j=await r.json();ok=!!(j&&j.ok)}catch(e){ok=false}
+    if(!ok)await sleep(1200*(i+1));
+  }
+  net.state=ok?"saved":"error";net.busy=false;
+  if(net.again)return send();
+  return ok;
+}
+async function finalSave(){for(let i=0;i<40&&net.busy;i++)await sleep(250);return send()}
+window.addEventListener("pagehide",()=>{if(S.status==="in_progress"&&S.sid&&CONFIG.SHEET_URL&&navigator.sendBeacon){try{navigator.sendBeacon(CONFIG.SHEET_URL,new Blob([JSON.stringify(payload())],{type:"text/plain"}))}catch(e){}}});
+
+/* render: bar + board */
+function renderBar(){
+  $("ptsText").innerHTML=`${S.points} <small>/ ${S.cfg.target} pts</small>`;
+  const pct=Math.min(100,S.points/S.cfg.target*100);$("fill").style.width=pct+"%";$("track").setAttribute("aria-valuenow",Math.round(pct));
+}
+function renderGrid(){
+  $("grid").innerHTML=S.cards.filter(c=>S.filter==="all"||c.type===S.filter).sort((a,b)=>a.order-b.order).map(c=>{
+    const stamp=c.status==="done"?`<span class="stamp">Done</span>`:c.status==="abandoned"?`<span class="stamp">Skipped</span>`:"";
+    return `<button class="card t-${c.type} ${c.status}${S.selected===c.id?" sel":""}" data-id="${c.id}" ${c.status!=="open"?'aria-disabled="true"':""} aria-label="${M[c.type].long}, ${c.pts} points, ${sizeWord(c)}">
+      <span class="ic">${ICON[c.type]}</span><span class="nm">${M[c.type].name}</span><span class="pts num">${c.pts} pts</span><span class="sz">${sizeWord(c)}</span>${stamp}</button>`}).join("");
+}
+function renderConfirm(){
+  const c=S.cards.find(x=>x.id===S.selected);
+  if(!c||c.status!=="open"){$("confirm").hidden=true;return}
+  $("confirm").innerHTML=`<div class="who t-${c.type}"><span class="sw">${ICON[c.type]}</span><div><b>${M[c.type].long} · ${c.pts} pts</b><p>${sizeWord(c)}</p></div></div>
+    <div class="row"><button class="btn" id="cBack">Back</button><button class="btn go" id="cGo">Start</button></div>`;
+  $("confirm").hidden=false;
+  $("cBack").onclick=()=>{logE("preview_close",c);S.selected=null;renderConfirm();renderGrid()};
+  $("cGo").onclick=()=>startTask(c);
+}
+
+/* images */
+function codeImage(c){
+  const rng=mulberry32(c.imgSeed);const perLine=16,cw=40,W=perLine*cw+40,lines=Math.ceil(c.len/perLine),H=lines*64+40;
+  const cv=document.createElement("canvas"),dpr=window.devicePixelRatio||1,ctx=cv.getContext("2d");
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.className="scan";cv.setAttribute("role","img");cv.setAttribute("aria-label","Handwritten specimen label");
+  ctx.scale(dpr,dpr);ctx.fillStyle="#FAFAF5";ctx.fillRect(0,0,W,H);ctx.fillStyle="#E0262B";ctx.fillRect(0,0,W,8);
+  for(let i=0;i<500;i++){ctx.fillStyle=`rgba(40,50,60,${.08+rng()*.18})`;ctx.fillRect(rng()*W,10+rng()*(H-10),1.5,1.5)}
+  const fonts=['"Courier New",monospace','Georgia,serif','Verdana,sans-serif','"Trebuchet MS",sans-serif','"Times New Roman",serif'];
+  for(let i=0;i<c.len;i++){
+    const line=Math.floor(i/perLine),col=i%perLine;const x=24+col*cw+(col>=8?6:0)+rng()*6,y=20+line*64+34+rng()*10-5;
+    ctx.save();ctx.translate(x,y);ctx.rotate((rng()-.5)*.7);ctx.scale(.85+rng()*.35,.85+rng()*.3);
+    ctx.font=`${rng()<.5?"bold ":""}${30+Math.floor(rng()*8)}px ${fonts[Math.floor(rng()*fonts.length)]}`;
+    ctx.fillStyle=`hsl(${210+rng()*40},${20+rng()*25}%,${14+rng()*18}%)`;ctx.textBaseline="middle";ctx.fillText(c.code[i],0,0);ctx.restore();
+  }
+  for(let l=0;l<3+lines;l++){ctx.beginPath();ctx.moveTo(0,12+rng()*(H-12));ctx.bezierCurveTo(W*.3,12+rng()*(H-12),W*.6,12+rng()*(H-12),W,12+rng()*(H-12));ctx.strokeStyle=`rgba(40,55,70,${.35+rng()*.3})`;ctx.lineWidth=1+rng()*1.5;ctx.stroke()}
+  return cv;
+}
+function noteImage(text){
+  const W=680,pad=24,fs=17,lh=28,cv=document.createElement("canvas"),dpr=window.devicePixelRatio||1,ctx=cv.getContext("2d");
+  ctx.font=`${fs}px "Courier New",Courier,monospace`;const lines=[];let line="";
+  text.split(" ").forEach(w=>{const t=line?line+" "+w:w;if(ctx.measureText(t).width>W-pad*2&&line){lines.push(line);line=w}else line=t});if(line)lines.push(line);
+  const H=pad*2+lines.length*lh;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.className="scan";cv.setAttribute("role","img");cv.setAttribute("aria-label","Patient note");
+  ctx.scale(dpr,dpr);ctx.fillStyle="#FCFCFA";ctx.fillRect(0,0,W,H);
+  ctx.font=`${fs}px "Courier New",Courier,monospace`;ctx.fillStyle="#0B0D12";ctx.textBaseline="top";
+  lines.forEach((l,i)=>ctx.fillText(l,pad,pad+i*lh));return cv;
+}
+
+/* tasks */
+function startTask(c){
+  if(c.pick==null)c.pick=++S.picks;
+  S.active={card:c,startedAt:Date.now(),inputs:0};S.selected=null;
+  logE("task_start",c,{pts:c.pts,pick:c.pick,ai:aiOn()});
+  $("boardView").hidden=true;$("taskView").hidden=false;renderTask();window.scrollTo({top:0});
+}
+function endTask(outcome){
+  const a=S.active,c=a.card,secs=(Date.now()-a.startedAt)/1000;
+  c.time=secs;c.status=outcome;
+  if(outcome==="done"){S.points+=c.pts;logE("task_complete",c,{secs:+secs.toFixed(1),pts:c.pts,ai_uses:c.aiUses,attempts:c.attempts,inputs:a.inputs,total:S.points})}
+  else logE("task_skip",c,{secs:+secs.toFixed(1),ai_uses:c.aiUses,attempts:c.attempts,inputs:a.inputs});
+  clearInterval(a.lockTimer);S.active=null;$("taskView").hidden=true;
+  if(S.points>=S.cfg.target){finish("completed");return}
+  if(!S.cards.some(x=>x.status==="open")){finish("board_exhausted");return}
+  $("boardView").hidden=false;renderAll();flush();
+}
+function renderTask(){
+  const a=S.active,c=a.card,ai=aiOn(),v=$("taskView");
+  v.innerHTML=`<div class="blk t-${c.type}"><h2>${ICON[c.type]}${M[c.type].long}</h2><span class="pts num">${c.pts} pts</span></div><div class="task-body" id="tb"></div>`;
+  const tb=$("tb");
+  const aiBtn=ai?`<button class="btn ai" id="aiBtn">${ICON.ai}<span>${M[c.type].ask}</span></button>`:"";
+  const actions=`<div class="fb info" id="fb" aria-live="polite"></div><div class="row"><button class="btn go" id="submit">${M[c.type].submit}</button>${aiBtn}<button class="btn link" id="abort">Skip (no points)</button></div>`;
+  if(c.type==="label"){
+    tb.innerHTML=`<p class="order">Type the code exactly.</p><div class="imgwrap" id="img"></div><input class="codein" id="codein" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" aria-label="Specimen code" placeholder="Code">${actions}`;
+    $("img").appendChild(codeImage(c));
+    const inp=$("codein");inp.addEventListener("paste",e=>{e.preventDefault();logE("paste_blocked",c)});inp.addEventListener("input",()=>a.inputs++);
+  }else if(c.type==="note"){
+    tb.innerHTML=`<p class="order">How many times does <span style="font-family:var(--mono);font-size:24px;font-weight:700">${c.letter.toUpperCase()}</span> appear? Count capital and small letters.</p><div class="imgwrap" id="img"></div>
+      <div class="row"><input class="numin" id="numin" type="number" min="0" inputmode="numeric" aria-label="Your count" placeholder="?"><span id="tipSlot"></span></div>${actions}`;
+    $("img").appendChild(noteImage(c.text));$("numin").addEventListener("input",()=>a.inputs++);
+  }else{
+    a.vals=c.targets.map(()=>50);const L="ABCDEFGHIJ";
+    tb.innerHTML=`<p class="order">Set each line to its ordered rate. Every light must be green.</p>${c.prec<1?`<p class="hint">Rates use one decimal. Click a slider, then use the arrow keys.</p>`:""}
+      <div class="lines">${c.targets.map((t,i)=>`<div class="line"><div class="lbl">Line ${L[i]}<span>${c.prec===1?t:t.toFixed(1)} mL/h</span></div><input type="range" id="w${i}" min="0" max="100" step="${c.prec}" value="50" aria-label="Line ${L[i]} rate"><output id="wo${i}"></output><span class="led" id="wl${i}"></span></div>`).join("")}</div>${actions}`;
+    c.targets.forEach((t,i)=>$("w"+i).addEventListener("input",e=>{a.inputs++;a.vals[i]=parseFloat(e.target.value);updLine(i)}));c.targets.forEach((t,i)=>updLine(i));
+  }
+  if(ai)$("aiBtn").onclick=()=>useAI(c);
+  $("submit").onclick=()=>submit(c);
+  const ab=$("abort");ab.onclick=()=>{if(!ab.classList.contains("armed")){ab.classList.add("armed");ab.textContent="Click again to skip";setTimeout(()=>{if(ab.isConnected){ab.classList.remove("armed");ab.textContent="Skip (no points)"}},4000)}else endTask("abandoned")};
+}
+const onTarget=(c,i,v)=>Math.abs(v-c.targets[i])<c.prec/2-1e-9;
+function updLine(i){const a=S.active,c=a.card,v=a.vals[i];$("wo"+i).textContent=(c.prec===1?Math.round(v):v.toFixed(1));$("wl"+i).classList.toggle("on",onTarget(c,i,v))}
+function fb(msg,kind){const el=$("fb");el.textContent=msg;el.className="fb "+kind}
+
+function useAI(c){
+  const btn=$("aiBtn"),lab=btn.querySelector("span"),orig=lab.textContent;btn.disabled=true;c.aiUses++;logE("ai_request",c,{use:c.aiUses});
+  let left=Number(S.cfg.delay)||0;
+  const deliver=()=>{
+    if(!S.active||S.active.card!==c)return;btn.disabled=false;lab.textContent=orig;
+    if(c.type==="label"){
+      const k=labelErrors(c),ch=c.code.split(""),used=new Set();
+      while(used.size<Math.min(k,ch.length)){const i=Math.floor(Math.random()*ch.length);if(used.has(i))continue;used.add(i);ch[i]=LOOKALIKE[ch[i]]||CHARSET[Math.floor(Math.random()*CHARSET.length)]}
+      const draft=ch.join(""),inp=$("codein");logE("ai_deliver",c,{errors:k,draft,replaced_chars:inp.value.length});inp.value=draft;fb("AI filled in its reading. Check it.","info");
+    }else if(c.type==="note"){
+      let g=c.answer;if(Math.random()>noteAcc(c))g=Math.max(0,c.answer+(Math.random()<.5?-1:1)*(1+Math.floor(Math.random()*2)));
+      $("tipSlot").innerHTML=`<span class="tip">AI counts ${g}<button id="useTip">Use</button></span>`;
+      $("useTip").onclick=()=>{$("numin").value=g;logE("ai_accept",c,{value:g})};logE("ai_deliver",c,{value:g,correct:g===c.answer});
+    }else{
+      const a=S.active;const out=c.targets.map(t=>c.prec===1?(Math.random()<.85?t:Math.min(100,Math.max(0,t+(Math.random()<.5?-1:1)))):Math.min(100,Math.max(0,Math.round((t+(Math.random()-.5))*10)/10)));
+      out.forEach((v,i)=>{a.vals[i]=v;$("w"+i).value=v;updLine(i)});logE("ai_deliver",c,{exact:out.filter((v,i)=>onTarget(c,i,v)).length,of:c.n});fb("AI set the rates. Check the lights.","info");
+    }
+  };
+  if(left<=0){deliver();return}
+  lab.textContent=`Working… ${Math.ceil(left)}s`;
+  const iv=setInterval(()=>{left-=.25;if(!btn.isConnected){clearInterval(iv);return}if(left<=0){clearInterval(iv);deliver()}else lab.textContent=`Working… ${Math.ceil(left)}s`},250);
+}
+function failWith(msg){
+  const a=S.active;let left=Number(S.cfg.lock)||0;const sb=$("submit");
+  if(left<=0){fb(msg,"bad");return}
+  sb.disabled=true;const show=()=>fb(`${msg} Try again in ${left}s.`,"bad");show();
+  clearInterval(a.lockTimer);a.lockTimer=setInterval(()=>{left--;if(!sb.isConnected){clearInterval(a.lockTimer);return}if(left<=0){clearInterval(a.lockTimer);sb.disabled=false;fb("Try again.","info")}else show()},1000);
+}
+function submit(c){
+  const a=S.active;c.attempts++;
+  if(c.type==="label"){
+    const typed=$("codein").value.replace(/\s+/g,"").toUpperCase();let diff=Math.abs(typed.length-c.code.length);for(let i=0;i<Math.min(typed.length,c.code.length);i++)if(typed[i]!==c.code[i])diff++;
+    if(typed===c.code){logE("submit_pass",c,{typed});endTask("done")}else{logE("submit_fail",c,{typed,wrong_positions:diff});failWith("Not quite.")}
+  }else if(c.type==="note"){
+    const raw=$("numin").value;if(raw===""){c.attempts--;fb("Enter a number first.","bad");return}
+    const v=parseInt(raw,10);
+    if(v===c.answer){logE("submit_pass",c,{value:v});endTask("done")}else{logE("submit_fail",c,{value:v,off_by:v-c.answer});failWith("Not quite.")}
+  }else{
+    const exact=a.vals.filter((v,i)=>onTarget(c,i,v)).length;
+    if(exact===c.n){logE("submit_pass",c,{exact});endTask("done")}else{logE("submit_fail",c,{exact,of:c.n});failWith("Some lights are still red.")}
+  }
+}
+
+
+/* ---------- start ---------- */
+function newCode(){let c="";for(let i=0;i<6;i++)c+=CHARSET[Math.floor(Math.random()*CHARSET.length)];return c}
+function renderStart(){
+  $("startView").innerHTML=`
+    <div class="mark"><i></i>Clinic</div>
+    <h1>Earn ${S.cfg.target} points as fast as you can.</h1>
+    <p class="lead">Pick tasks from the board in any order. A task only pays if it's exactly right.</p>
+    <div class="legend">${["label","note","pump"].map(t=>`<div class="t-${t}"><span class="sw">${ICON[t]}</span>${M[t].legend}</div>`).join("")}</div>
+    ${aiOn()?`<p class="lead"><span class="aitag">AI</span>&nbsp; An AI helper is available on every task.</p>`:""}
+    <form class="idform" id="startForm" novalidate>
+      ${URL_PID?"":`<input id="pid" autocomplete="off" spellcheck="false" placeholder="Participant ID" aria-label="Participant ID" maxlength="40">`}
+      <button class="btn go" type="submit">Begin</button>
+    </form>
+    <p class="err" id="startFb" aria-live="polite"></p>`;
+  $("startForm").addEventListener("submit",e=>{e.preventDefault();begin()});
+}
+function begin(){
+  const pid=URL_PID||($("pid")?$("pid").value.trim():"");
+  if(!pid){$("startFb").textContent="Enter your participant ID.";$("pid").focus();return}
+  const saved=loadSaved(pid);
+  if(saved&&saved.sid&&saved.status!=="not_started"){restore(saved);return}
+  S.participant=pid;S.cards=buildCards();S.points=0;S.log=[];S.picks=0;S.status="in_progress";
+  S.start=Date.now();S.startedAt=new Date().toISOString();S.code=newCode();
+  S.sid=Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+  logE("session_start",null,{participant:pid,arm:S.arm==="all"?"ai":"noai",arm_source:S.armSource,config:{...S.cfg},width:window.innerWidth});
+  showBoard();send();
+}
+function restore(saved){
+  Object.assign(S,saved,{active:null,selected:null,filter:"all"});
+  if(S.status==="in_progress"){logE("resume",null,{secs:+elapsed().toFixed(1)});showBoard();send()}
+  else{$("startView").hidden=true;$("bar").hidden=false;renderBar();$("endView").hidden=false;renderEnd()}
+}
+function showBoard(){
+  $("startView").hidden=true;$("bar").hidden=false;$("boardView").hidden=false;
+  document.querySelectorAll("#filters .chip").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.f===S.filter)));
+  renderAll();window.scrollTo({top:0});
+}
+
+/* ---------- end ---------- */
+function returnUrl(){
+  try{const u=new URL(RETURN,location.href);
+    const add={pid:S.participant,sid:S.sid,code:S.code,arm:S.arm==="all"?"ai":"noai",status:S.status,points:S.points,secs:Math.round(elapsed()),tasks_done:S.cards.filter(c=>c.status==="done").length,ai_requests:S.log.filter(e=>e.event==="ai_request").length};
+    Object.entries(add).forEach(([k,v])=>u.searchParams.set(k,v));return u.toString()}catch(e){return ""}
+}
+let redirecting=false;
+async function finish(reason){
+  if(S.status!=="in_progress")return;
+  S.endAt=Date.now();S.status=reason;
+  logE("session_end",null,{reason,points:S.points,secs:+elapsed().toFixed(1)});
+  $("boardView").hidden=true;$("taskView").hidden=true;$("endView").hidden=false;renderBar();renderEnd();window.scrollTo({top:0});
+  await finalSave();renderEnd();
+  const to=returnUrl();
+  if(to){redirecting=true;renderEnd();setTimeout(()=>{location.href=to},1500)}
+}
+function renderEnd(){
+  const done=S.cards.filter(c=>c.status==="done").length;
+  const to=RETURN?returnUrl():"";
+  const saving=net.state==="saving"||(net.busy&&net.state!=="off");
+  let box;
+  if(to){
+    box=saving&&!redirecting?`<p class="saved wait">Saving your results…</p>`:`<p class="saved ok">Taking you back to the survey…</p><div class="row"><a class="btn go" href="${esc(to)}">Continue to the survey</a></div>`;
+  }else{
+    box=`<p class="lead">Your completion code</p><div class="codebox">${S.code}</div><p class="hint">Enter this code in the survey to finish.</p>`;
+  }
+  if(net.state==="error")box+=`<p class="saved warn">Your results may not have saved. Please let the researcher know your participant ID and completion code: ${esc(S.participant)} · ${S.code}.</p>`;
+  $("endView").innerHTML=`<div class="mark"><i></i>Clinic</div><h1>${S.status==="completed"?"Done. Thank you.":"Session ended. Thank you."}</h1>
+    <div class="big"><div><span>Points</span><b class="num">${S.points}</b></div><div><span>Time</span><b class="num">${fmtTime(elapsed())}</b></div><div><span>Tasks</span><b class="num">${done}</b></div></div>${box}`;
+}
+
+/* ---------- wiring ---------- */
+function renderAll(){renderBar();renderGrid();renderConfirm()}
+document.querySelectorAll("#filters .chip[data-f]").forEach(b=>{const k=b.dataset.f;if(M[k])b.innerHTML=ICON[k]+M[k].name});
+$("filters").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b||S.status!=="in_progress")return;S.filter=b.dataset.f;document.querySelectorAll("#filters .chip").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));logE("filter",null,{type:S.filter});renderGrid()});
+$("grid").addEventListener("click",e=>{const b=e.target.closest(".card");if(!b||S.active||S.status!=="in_progress")return;const c=S.cards.find(x=>x.id===b.dataset.id);if(!c||c.status!=="open")return;S.selected=c.id;logE("preview",c,{pts:c.pts});renderGrid();renderConfirm()});
+$("endEarly").onclick=()=>{const b=$("endEarly");if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent="Click again to end";setTimeout(()=>{if(b.isConnected){b.classList.remove("armed");b.textContent="End session"}},4000)}else finish("ended_early")};
+setInterval(()=>{if(S.status==="in_progress")$("clock").textContent=fmtTime(elapsed())},500);
+
+if(!CONFIG.SHEET_URL)$("setupWarn").hidden=false;
+assignArm();
+const saved=URL_PID?loadSaved(URL_PID):null;
+if(saved&&saved.sid&&saved.status!=="not_started")restore(saved);else renderStart();
+})();
+</script>
+</body>
+</html>
