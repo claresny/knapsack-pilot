@@ -17,7 +17,7 @@ img{max-width:100%}
   --bg:#EEF0F3; --surface:#FFFFFF; --ink:#0B0D12; --muted:#5A6170; --line:#D7DBE1;
   --label:#2350E0; --label-ink:#FFFFFF; --note:#F5B700; --note-ink:#0B0D12; --pump:#0E9A68; --pump-ink:#FFFFFF;
   --cross:#E0262B; --good:#0E9A68; --bad:#D42A2F; --bad-soft:#FBE3E3; --good-soft:#DDF3EA;
-  --btn:#0B0D12; --btn-ink:#FFFFFF;
+  --btn:#0B0D12; --btn-ink:#FFFFFF; --ai:#6D28D9; --ai-ink:#FFFFFF;
   --label-c:#2350E0; --label-s:#E8EDFD; --note-c:#A87A00; --note-s:#FCF1CF; --pump-c:#0E8A5E; --pump-s:#DCF2E9;
   --sans:"Archivo","Helvetica Neue",Arial,system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
@@ -27,7 +27,7 @@ img{max-width:100%}
     --bg:#0B0D11; --surface:#161A21; --ink:#F2F4F7; --muted:#9AA3B2; --line:#2A303A;
     --label:#6F8DFF; --label-ink:#0B0D12; --note:#FFC933; --note-ink:#0B0D12; --pump:#34D399; --pump-ink:#0B0D12;
     --cross:#FF5A5F; --good:#34D399; --bad:#FF6B70; --bad-soft:#3A1C1E; --good-soft:#123528;
-    --btn:#F2F4F7; --btn-ink:#0B0D12; color-scheme:dark;
+    --btn:#F2F4F7; --btn-ink:#0B0D12; --ai:#A78BFA; --ai-ink:#0B0D12; color-scheme:dark;
     --label-c:#8BA3FF; --label-s:#1E2648; --note-c:#FFC933; --note-s:#3A2F0E; --pump-c:#34D399; --pump-s:#11342A;
   }
 }
@@ -35,7 +35,7 @@ img{max-width:100%}
   --bg:#0B0D11; --surface:#161A21; --ink:#F2F4F7; --muted:#9AA3B2; --line:#2A303A;
   --label:#6F8DFF; --label-ink:#0B0D12; --note:#FFC933; --note-ink:#0B0D12; --pump:#34D399; --pump-ink:#0B0D12;
   --cross:#FF5A5F; --good:#34D399; --bad:#FF6B70; --bad-soft:#3A1C1E; --good-soft:#123528;
-  --btn:#F2F4F7; --btn-ink:#0B0D12; color-scheme:dark;
+  --btn:#F2F4F7; --btn-ink:#0B0D12; --ai:#A78BFA; --ai-ink:#0B0D12; color-scheme:dark;
     --label-c:#8BA3FF; --label-s:#1E2648; --note-c:#FFC933; --note-s:#3A2F0E; --pump-c:#34D399; --pump-s:#11342A;
 }
 *{box-sizing:border-box}
@@ -86,8 +86,8 @@ p{margin:0}
 /* buttons */
 .btn{border:2px solid var(--ink);background:var(--surface);border-radius:8px;padding:11px 20px;font-weight:800;font-size:16px}
 .btn.go{background:var(--btn);color:var(--btn-ink);border-color:var(--btn)}
-.btn.ai{display:inline-flex;align-items:center;gap:8px}
-.btn.ai svg{width:18px;height:18px}
+.btn.ai{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--ai);color:var(--ai-ink);border-color:var(--ai);font-size:17px;padding:12px 22px;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.btn.ai svg{width:20px;height:20px}
 .btn.link{border-color:transparent;background:transparent;color:var(--muted);font-weight:600;padding-inline:8px}
 .btn.link.armed{color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -133,7 +133,7 @@ p{margin:0}
 .task-body{padding:18px;display:flex;flex-direction:column;gap:16px;min-width:0}
 .order{font-size:18px;font-weight:600;max-width:60ch}
 .imgwrap{overflow-x:auto;max-width:100%}
-.scan{display:block;border-radius:6px;border:1px solid var(--line);user-select:none;-webkit-user-select:none}
+.scan{display:block;max-width:100%;height:auto;border-radius:6px;border:1px solid var(--line);user-select:none;-webkit-user-select:none}
 .codein{width:100%;max-width:660px;font-family:var(--mono);font-size:22px;letter-spacing:.12em;text-transform:uppercase;padding:12px 14px;border:2px solid var(--ink);border-radius:8px;background:var(--surface)}
 .numin{width:120px;font-family:var(--mono);font-size:24px;padding:10px 12px;border:2px solid var(--ink);border-radius:8px;background:var(--surface)}
 .tip{display:inline-flex;align-items:center;gap:10px;border:2px dashed var(--ink);border-radius:8px;padding:6px 6px 6px 12px;font-weight:700}
@@ -176,7 +176,17 @@ details[open] summary{margin-bottom:12px}
   .bar-in{grid-template-columns:1fr auto;gap:8px 12px}
   .prog{grid-column:1/-1;grid-row:2}
   .sheet h1{font-size:34px}
-  .line{grid-template-columns:80px minmax(0,1fr) 70px 14px;gap:8px}
+  .line{grid-template-columns:minmax(0,1fr) auto 16px;grid-template-areas:"lbl out led" "rng rng rng";gap:6px 10px}
+  .line .lbl{grid-area:lbl} .line input[type=range]{grid-area:rng;height:32px} .line output{grid-area:out} .line .led{grid-area:led}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .card{padding:16px 8px 14px}
+  .card .ic{width:64px;height:64px;margin-bottom:4px}
+  .card .ic svg{width:36px;height:36px}
+  .task .blk{padding:12px 14px}
+  .task .blk h2{font-size:19px}
+  .task .blk .pts{font-size:22px;white-space:nowrap}
+  .task-body{padding:14px}
+  .task .row .btn.go,.task .row .btn.ai{flex:1 1 100%;padding-block:14px}
   .codein{font-size:18px}
   .big b{font-size:26px}
 }
@@ -282,6 +292,11 @@ function logE(event,card,detail){S.log.push({t:+elapsed().toFixed(2),event,card:
 
 /* ---------- local copy, so a reload resumes instead of restarting ---------- */
 const keyFor=pid=>"clinic-run-"+pid;
+/* no ID in the link: make one and keep it, so a reload resumes the same run (?reset=1 forgets it) */
+const AUTO_KEY="clinic-auto-pid";
+if(P.has("reset")){try{localStorage.removeItem(AUTO_KEY)}catch(e){}}
+function storedAutoPid(){try{return localStorage.getItem(AUTO_KEY)||""}catch(e){return ""}}
+function autoPid(){let id=storedAutoPid();if(!id){id="P-"+Date.now().toString(36).slice(-4)+Math.random().toString(36).slice(2,6);try{localStorage.setItem(AUTO_KEY,id)}catch(e){}}return id}
 function persist(){if(!S.participant)return;try{localStorage.setItem(keyFor(S.participant),JSON.stringify({...S,active:null,selected:null}))}catch(e){}}
 function loadSaved(pid){try{const raw=localStorage.getItem(keyFor(pid));return raw?JSON.parse(raw):null}catch(e){return null}}
 const _logE=logE;
@@ -339,8 +354,8 @@ function renderConfirm(){
 }
 
 /* images */
-function codeImage(c){
-  const rng=mulberry32(c.imgSeed);const perLine=16,cw=40,W=perLine*cw+40,lines=Math.ceil(c.len/perLine),H=lines*64+40;
+function codeImage(c,fit){
+  const rng=mulberry32(c.imgSeed);const perLine=fit&&fit<500?8:16,cw=40,W=perLine*cw+40,lines=Math.ceil(c.len/perLine),H=lines*64+40;
   const cv=document.createElement("canvas"),dpr=window.devicePixelRatio||1,ctx=cv.getContext("2d");
   cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.className="scan";cv.setAttribute("role","img");cv.setAttribute("aria-label","Handwritten specimen label");
   ctx.scale(dpr,dpr);ctx.fillStyle="#FAFAF5";ctx.fillRect(0,0,W,H);ctx.fillStyle="#E0262B";ctx.fillRect(0,0,W,8);
@@ -355,14 +370,18 @@ function codeImage(c){
   for(let l=0;l<3+lines;l++){ctx.beginPath();ctx.moveTo(0,12+rng()*(H-12));ctx.bezierCurveTo(W*.3,12+rng()*(H-12),W*.6,12+rng()*(H-12),W,12+rng()*(H-12));ctx.strokeStyle=`rgba(40,55,70,${.35+rng()*.3})`;ctx.lineWidth=1+rng()*1.5;ctx.stroke()}
   return cv;
 }
-function noteImage(text){
-  const W=680,pad=24,fs=17,lh=28,cv=document.createElement("canvas"),dpr=window.devicePixelRatio||1,ctx=cv.getContext("2d");
+function noteImage(text,fit,hl){
+  const W=Math.max(260,Math.min(680,fit||680)),pad=24,fs=17,lh=28,cv=document.createElement("canvas"),dpr=window.devicePixelRatio||1,ctx=cv.getContext("2d");
   ctx.font=`${fs}px "Courier New",Courier,monospace`;const lines=[];let line="";
   text.split(" ").forEach(w=>{const t=line?line+" "+w:w;if(ctx.measureText(t).width>W-pad*2&&line){lines.push(line);line=w}else line=t});if(line)lines.push(line);
   const H=pad*2+lines.length*lh;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.className="scan";cv.setAttribute("role","img");cv.setAttribute("aria-label","Patient note");
   ctx.scale(dpr,dpr);ctx.fillStyle="#FCFCFA";ctx.fillRect(0,0,W,H);
   ctx.font=`${fs}px "Courier New",Courier,monospace`;ctx.fillStyle="#0B0D12";ctx.textBaseline="top";
-  lines.forEach((l,i)=>ctx.fillText(l,pad,pad+i*lh));return cv;
+  let off=0;
+  lines.forEach((l,i)=>{const y=pad+i*lh;
+    if(hl)for(let j=0;j<l.length;j++)if(hl.has(off+j)){const x=pad+ctx.measureText(l.slice(0,j)).width;ctx.fillStyle="#FFE14D";ctx.fillRect(x-1,y-4,ctx.measureText(l[j]).width+2,fs+8)}
+    ctx.fillStyle="#0B0D12";ctx.fillText(l,pad,y);off+=l.length+1});
+  return cv;
 }
 
 /* tasks */
@@ -390,12 +409,12 @@ function renderTask(){
   const actions=`<div class="fb info" id="fb" aria-live="polite"></div><div class="row"><button class="btn go" id="submit">${M[c.type].submit}</button>${aiBtn}<button class="btn link" id="abort">Skip (no points)</button></div>`;
   if(c.type==="label"){
     tb.innerHTML=`<p class="order">Type the code exactly.</p><div class="imgwrap" id="img"></div><input class="codein" id="codein" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" aria-label="Specimen code" placeholder="Code">${actions}`;
-    $("img").appendChild(codeImage(c));
+    $("img").appendChild(codeImage(c,$("img").clientWidth));
     const inp=$("codein");inp.addEventListener("paste",e=>{e.preventDefault();logE("paste_blocked",c)});inp.addEventListener("input",()=>a.inputs++);
   }else if(c.type==="note"){
     tb.innerHTML=`<p class="order">How many times does <span style="font-family:var(--mono);font-size:24px;font-weight:700">${c.letter.toUpperCase()}</span> appear? Count capital and small letters.</p><div class="imgwrap" id="img"></div>
       <div class="row"><input class="numin" id="numin" type="number" min="0" inputmode="numeric" aria-label="Your count" placeholder="?"><span id="tipSlot"></span></div>${actions}`;
-    $("img").appendChild(noteImage(c.text));$("numin").addEventListener("input",()=>a.inputs++);
+    $("img").appendChild(noteImage(c.text,$("img").clientWidth));$("numin").addEventListener("input",()=>a.inputs++);
   }else{
     a.vals=c.targets.map(()=>50);const L="ABCDEFGHIJ";
     tb.innerHTML=`<p class="order">Set the tool to the ordered measurement rate.</p>${c.prec<1?`<p class="hint">Rates use one decimal. Click a slider, then use the arrow keys.</p>`:""}
@@ -421,8 +440,14 @@ function useAI(c){
       const draft=ch.join(""),inp=$("codein");logE("ai_deliver",c,{errors:k,draft,replaced_chars:inp.value.length});inp.value=draft;fb("AI filled in its reading. Check it.","info");
     }else if(c.type==="note"){
       let g=c.answer;if(Math.random()>noteAcc(c))g=Math.max(0,c.answer+(Math.random()<.5?-1:1)*(1+Math.floor(Math.random()*2)));
+      /* highlight exactly g letters: some real ones are missed when g is low, other letters are marked when g is high */
+      const tgt=c.letter.toLowerCase(),hits=[],others=[];
+      [...c.text].forEach((ch,i)=>{const l=ch.toLowerCase();if(l===tgt)hits.push(i);else if(/[a-z]/.test(l))others.push(i)});
+      const shuf=x=>{for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]]}return x};
+      const hl=new Set(g<=hits.length?shuf(hits).slice(0,g):[...hits,...shuf(others).slice(0,g-hits.length)]);
+      $("img").replaceChildren(noteImage(c.text,$("img").clientWidth,hl));
       $("tipSlot").innerHTML=`<span class="tip">AI counts ${g}<button id="useTip">Use</button></span>`;
-      $("useTip").onclick=()=>{$("numin").value=g;logE("ai_accept",c,{value:g})};logE("ai_deliver",c,{value:g,correct:g===c.answer});
+      $("useTip").onclick=()=>{$("numin").value=g;logE("ai_accept",c,{value:g})};logE("ai_deliver",c,{value:g,correct:g===c.answer,missed:Math.max(0,c.answer-g),extra:Math.max(0,g-c.answer)});
     }else{
       const a=S.active;const out=c.targets.map(t=>c.prec===1?(Math.random()<.85?t:Math.min(100,Math.max(0,t+(Math.random()<.5?-1:1)))):Math.min(100,Math.max(0,Math.round((t+(Math.random()-.5))*10)/10)));
       out.forEach((v,i)=>{a.vals[i]=v;$("w"+i).value=v;updLine(i)});logE("ai_deliver",c,{exact:out.filter((v,i)=>onTarget(c,i,v)).length,of:c.n});fb("AI set the rates. Check them.","info");
@@ -463,15 +488,13 @@ function renderStart(){
     <p class="lead">Pick tasks from the board in any order. You'll only get paid if the task is done completely correctly.${aiOn()?" An AI tool is available for each task.":""}</p>
     <div class="legend">${["label","note","pump"].map(t=>`<div class="t-${t}"><span class="sw">${ICON[t]}</span>${M[t].legend}</div>`).join("")}</div>
     <form class="idform" id="startForm" novalidate>
-      ${URL_PID?"":`<input id="pid" autocomplete="off" spellcheck="false" placeholder="Participant ID" aria-label="Participant ID" maxlength="40">`}
       <button class="btn go" type="submit">Begin</button>
     </form>
     <p class="err" id="startFb" aria-live="polite"></p>`;
   $("startForm").addEventListener("submit",e=>{e.preventDefault();begin()});
 }
 function begin(){
-  const pid=URL_PID||($("pid")?$("pid").value.trim():"");
-  if(!pid){$("startFb").textContent="Enter your participant ID.";$("pid").focus();return}
+  const pid=URL_PID||autoPid();
   const saved=loadSaved(pid);
   if(saved&&saved.sid&&saved.status!=="not_started"){restore(saved);return}
   S.participant=pid;S.cards=buildCards();S.points=0;S.log=[];S.picks=0;S.status="in_progress";
@@ -532,7 +555,7 @@ setInterval(()=>{if(S.status==="in_progress")$("clock").textContent=fmtTime(elap
 
 if(!CONFIG.SHEET_URL)$("setupWarn").hidden=false;
 assignArm();
-const saved=URL_PID?loadSaved(URL_PID):null;
+const startPid=URL_PID||storedAutoPid(),saved=startPid?loadSaved(startPid):null;
 if(saved&&saved.sid&&saved.status!=="not_started")restore(saved);else renderStart();
 })();
 </script>
