@@ -235,9 +235,9 @@ const ICON={
   ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>'
 };
 const M={
-  label:{name:"Label",long:"Copy a label",ask:"Ask AI to read it",submit:"Submit code",legend:"Copy a handwritten specimen code"},
-  note:{name:"Chart",long:"Count a letter",ask:"Ask AI to count",submit:"Submit count",legend:"Count one letter in a patient note"},
-  pump:{name:"Pump",long:"Set the pump",ask:"Ask AI to set it",submit:"Submit rates",legend:"Set each IV line to its exact rate"}
+  label:{name:"Specimen code",long:"Type a specimen code",ask:"Ask AI for help",submit:"Submit code",legend:"Type a specimen code"},
+  note:{name:"Patient note",long:"Search a patient note",ask:"Ask AI for help",submit:"Submit count",legend:"Search a patient note"},
+  pump:{name:"Measuring tool",long:"Align a patient measuring tool",ask:"Ask AI for help",submit:"Submit rates",legend:"Align a patient measuring tool"}
 };
 
 const SENTENCES=["Patient reports a mild headache that began two days ago.","Vital signs were stable throughout the morning shift.","Blood pressure was rechecked after the patient rested for ten minutes.","The wound dressing was changed and the site looked clean.","Family members visited in the afternoon and asked about discharge.","Physical therapy walked with the patient twice along the hallway.","Appetite improved and most of the lunch tray was finished.","The patient slept well overnight with no calls for assistance.","Lab results from this morning were reviewed with the attending.","Oxygen was weaned to room air without difficulty.","The IV site in the left forearm shows no redness or swelling.","Pain was rated four out of ten after the evening dose.","Discharge teaching was started and written materials were provided.","The patient asked for an extra blanket and the room was warmed.","A follow-up appointment was scheduled with the clinic next week.","Breath sounds were clear on both sides during the exam.","The patient was repositioned every two hours to protect the skin.","Fluid intake and output were recorded at the end of the shift.","Mild nausea was noted after breakfast and resolved within an hour.","The pharmacy confirmed the updated medication list.","The patient walked to the bathroom with standby assistance.","Temperature remained normal through the night.","A social worker met with the family to discuss home support.","The call light was placed within easy reach of the bed.","Hand hygiene was performed before and after each contact.","The patient's daughter will provide transport home.","A small bruise was observed on the right upper arm.","The surgical team rounded early and reviewed the plan of care.","Ice chips were offered and tolerated well.","Night staff reported the patient was calm and cooperative.","The bed alarm was activated as a fall precaution.","Weight was recorded this morning before breakfast.","The patient voiced understanding of the new diet instructions.","Compression stockings were applied to both legs.","Glucose was checked before each meal as ordered."];
@@ -290,9 +290,9 @@ logE=function(event,card,detail){_logE(event,card,detail);persist()};
 /* ---------- sending to the Google Sheet ---------- */
 function payload(){
   const cs=S.cards,ev=S.log,cnt=e=>ev.filter(x=>x.event===e).length,dt=t=>cs.filter(c=>c.status==="done"&&c.type===t).length;
-  const typ=t=>t==="note"?"chart":t;
+  const typ=t=>({label:"type",note:"search",pump:"slider"})[t]||t;
   return{
-    session:{session_id:S.sid,participant:S.participant,arm:S.arm==="all"?"ai":"noai",arm_source:S.armSource,status:S.status,started_at:S.startedAt,updated_at:new Date().toISOString(),points:S.points,goal:S.cfg.target,elapsed_s:+elapsed().toFixed(1),tasks_done:cs.filter(c=>c.status==="done").length,tasks_skipped:cs.filter(c=>c.status==="abandoned").length,labels_done:dt("label"),charts_done:dt("note"),pumps_done:dt("pump"),ai_requests:cnt("ai_request"),ai_accepts:cnt("ai_accept"),failed_submits:cnt("submit_fail"),previews:cnt("preview"),filter_clicks:cnt("filter"),reloads:cnt("resume"),completion_code:S.code,seed:S.cfg.seed,ai_delay_s:S.cfg.delay,wrong_wait_s:S.cfg.lock,screen_width:window.innerWidth,user_agent:navigator.userAgent.slice(0,200)},
+    session:{session_id:S.sid,participant:S.participant,arm:S.arm==="all"?"ai":"noai",arm_source:S.armSource,status:S.status,started_at:S.startedAt,updated_at:new Date().toISOString(),points:S.points,goal:S.cfg.target,elapsed_s:+elapsed().toFixed(1),tasks_done:cs.filter(c=>c.status==="done").length,tasks_skipped:cs.filter(c=>c.status==="abandoned").length,type_done:dt("label"),search_done:dt("note"),slider_done:dt("pump"),ai_requests:cnt("ai_request"),ai_accepts:cnt("ai_accept"),failed_submits:cnt("submit_fail"),previews:cnt("preview"),filter_clicks:cnt("filter"),reloads:cnt("resume"),completion_code:S.code,seed:S.cfg.seed,ai_delay_s:S.cfg.delay,wrong_wait_s:S.cfg.lock,screen_width:window.innerWidth,user_agent:navigator.userAgent.slice(0,200)},
     tasks:cs.map(c=>({task_id:c.id,type:typ(c.type),size:["","short","medium","long"][c.lvl],points:c.pts,decimals:c.type==="pump"?(c.prec<1):"",board_position:c.order+1,pick_order:c.pick==null?"":c.pick,status:c.status==="abandoned"?"skipped":c.status==="done"?"done":(c.pick!=null?"started":"not_picked"),time_s:c.time==null?"":+c.time.toFixed(2),ai_uses:c.aiUses,attempts:c.attempts})),
     events:ev.map((e,i)=>({idx:i,t:e.t,event:e.event,task_id:e.card,type:typ(e.type),detail:e.detail?JSON.stringify(e.detail):""}))
   };
@@ -398,8 +398,8 @@ function renderTask(){
     $("img").appendChild(noteImage(c.text));$("numin").addEventListener("input",()=>a.inputs++);
   }else{
     a.vals=c.targets.map(()=>50);const L="ABCDEFGHIJ";
-    tb.innerHTML=`<p class="order">Set each line to its ordered rate. Every light must be green.</p>${c.prec<1?`<p class="hint">Rates use one decimal. Click a slider, then use the arrow keys.</p>`:""}
-      <div class="lines">${c.targets.map((t,i)=>`<div class="line"><div class="lbl">Line ${L[i]}<span>${c.prec===1?t:t.toFixed(1)} mL/h</span></div><input type="range" id="w${i}" min="0" max="100" step="${c.prec}" value="50" aria-label="Line ${L[i]} rate"><output id="wo${i}"></output><span class="led" id="wl${i}"></span></div>`).join("")}</div>${actions}`;
+    tb.innerHTML=`<p class="order">Set the tool to the ordered measurement rate.</p>${c.prec<1?`<p class="hint">Rates use one decimal. Click a slider, then use the arrow keys.</p>`:""}
+      <div class="lines">${c.targets.map((t,i)=>`<div class="line"><div class="lbl">Setting ${L[i]}<span>${c.prec===1?t:t.toFixed(1)} mL/h</span></div><input type="range" id="w${i}" min="0" max="100" step="${c.prec}" value="50" aria-label="Setting ${L[i]} rate"><output id="wo${i}"></output><span class="led" id="wl${i}"></span></div>`).join("")}</div>${actions}`;
     c.targets.forEach((t,i)=>$("w"+i).addEventListener("input",e=>{a.inputs++;a.vals[i]=parseFloat(e.target.value);updLine(i)}));c.targets.forEach((t,i)=>updLine(i));
   }
   if(ai)$("aiBtn").onclick=()=>useAI(c);
@@ -425,7 +425,7 @@ function useAI(c){
       $("useTip").onclick=()=>{$("numin").value=g;logE("ai_accept",c,{value:g})};logE("ai_deliver",c,{value:g,correct:g===c.answer});
     }else{
       const a=S.active;const out=c.targets.map(t=>c.prec===1?(Math.random()<.85?t:Math.min(100,Math.max(0,t+(Math.random()<.5?-1:1)))):Math.min(100,Math.max(0,Math.round((t+(Math.random()-.5))*10)/10)));
-      out.forEach((v,i)=>{a.vals[i]=v;$("w"+i).value=v;updLine(i)});logE("ai_deliver",c,{exact:out.filter((v,i)=>onTarget(c,i,v)).length,of:c.n});fb("AI set the rates. Check the lights.","info");
+      out.forEach((v,i)=>{a.vals[i]=v;$("w"+i).value=v;updLine(i)});logE("ai_deliver",c,{exact:out.filter((v,i)=>onTarget(c,i,v)).length,of:c.n});fb("AI set the rates. Check them.","info");
     }
   };
   if(left<=0){deliver();return}
@@ -449,7 +449,7 @@ function submit(c){
     if(v===c.answer){logE("submit_pass",c,{value:v});endTask("done")}else{logE("submit_fail",c,{value:v,off_by:v-c.answer});failWith("Not quite.")}
   }else{
     const exact=a.vals.filter((v,i)=>onTarget(c,i,v)).length;
-    if(exact===c.n){logE("submit_pass",c,{exact});endTask("done")}else{logE("submit_fail",c,{exact,of:c.n});failWith("Some lights are still red.")}
+    if(exact===c.n){logE("submit_pass",c,{exact});endTask("done")}else{logE("submit_fail",c,{exact,of:c.n});failWith("Some settings are not correct yet.")}
   }
 }
 
@@ -460,9 +460,8 @@ function renderStart(){
   $("startView").innerHTML=`
     <div class="mark"><i></i>Clinic</div>
     <h1>Earn ${S.cfg.target} points as fast as you can.</h1>
-    <p class="lead">Pick tasks from the board in any order. A task only pays if it's exactly right.</p>
+    <p class="lead">Pick tasks from the board in any order. You'll only get paid if the task is done completely correctly.${aiOn()?" An AI tool is available for each task.":""}</p>
     <div class="legend">${["label","note","pump"].map(t=>`<div class="t-${t}"><span class="sw">${ICON[t]}</span>${M[t].legend}</div>`).join("")}</div>
-    ${aiOn()?`<p class="lead"><span class="aitag">AI</span>&nbsp; An AI helper is available on every task.</p>`:""}
     <form class="idform" id="startForm" novalidate>
       ${URL_PID?"":`<input id="pid" autocomplete="off" spellcheck="false" placeholder="Participant ID" aria-label="Participant ID" maxlength="40">`}
       <button class="btn go" type="submit">Begin</button>
