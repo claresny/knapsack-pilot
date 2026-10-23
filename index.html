@@ -313,7 +313,7 @@ function payload(){
   const cs=S.cards,ev=S.log,cnt=e=>ev.filter(x=>x.event===e).length,dt=t=>cs.filter(c=>c.status==="done"&&c.type===t).length;
   const typ=t=>({label:"type",note:"search",pump:"slider"})[t]||t;
   return{
-    session:{session_id:S.sid,participant:S.participant,arm:S.arm==="all"?"ai":"noai",arm_source:S.armSource,status:S.status,started_at:S.startedAt,updated_at:new Date().toISOString(),points:S.points,goal:S.cfg.target,elapsed_s:+elapsed().toFixed(1),tasks_done:cs.filter(c=>c.status==="done").length,tasks_skipped:cs.filter(c=>c.status==="abandoned").length,type_done:dt("label"),search_done:dt("note"),slider_done:dt("pump"),ai_requests:cnt("ai_request"),ai_accepts:cnt("ai_accept"),failed_submits:cnt("submit_fail"),previews:cnt("preview"),filter_clicks:cnt("filter"),reloads:cnt("resume"),completion_code:S.code,seed:S.cfg.seed,ai_delay_s:S.cfg.delay,wrong_wait_s:S.cfg.lock,screen_width:window.innerWidth,user_agent:navigator.userAgent.slice(0,200)},
+    session:{session_id:S.sid,participant:S.participant,arm:S.arm==="all"?"ai":"noai",arm_source:S.armSource,status:S.status,started_at:S.startedAt,updated_at:new Date().toISOString(),points:S.points,goal:S.cfg.target,elapsed_s:+elapsed().toFixed(1),tasks_done:cs.filter(c=>c.status==="done").length,tasks_skipped:cs.filter(c=>c.status==="abandoned").length,type_done:dt("label"),search_done:dt("note"),slider_done:dt("pump"),labels_done:dt("label"),charts_done:dt("note"),pumps_done:dt("pump"),ai_requests:cnt("ai_request"),ai_accepts:cnt("ai_accept"),failed_submits:cnt("submit_fail"),previews:cnt("preview"),filter_clicks:cnt("filter"),reloads:cnt("resume"),completion_code:S.code,seed:S.cfg.seed,ai_delay_s:S.cfg.delay,wrong_wait_s:S.cfg.lock,screen_width:window.innerWidth,user_agent:navigator.userAgent.slice(0,200)},
     tasks:cs.map(c=>({task_id:c.id,type:typ(c.type),size:["","short","medium","long"][c.lvl],points:c.pts,decimals:c.type==="pump"?(c.prec<1):"",board_position:c.order+1,pick_order:c.pick==null?"":c.pick,status:c.status==="abandoned"?"skipped":c.status==="done"?"done":(c.pick!=null?"started":"not_picked"),time_s:c.time==null?"":+c.time.toFixed(2),ai_uses:c.aiUses,attempts:c.attempts})),
     events:ev.map((e,i)=>({idx:i,t:e.t,event:e.event,task_id:e.card,type:typ(e.type),detail:e.detail?JSON.stringify(e.detail):""}))
   };
@@ -491,7 +491,7 @@ function renderStart(){
   $("startView").innerHTML=`
     <div class="mark"><i></i>Clinic</div>
     <h1>Earn ${S.cfg.target} points as fast as you can.</h1>
-    <p class="lead">Pick tasks from the board in any order. You'll only get paid if the task is done completely correctly.${aiOn()?" An AI tool is available for each task.":""}</p>
+    <p class="lead">Pick tasks from the board in any order. You'll only get points if the task is done completely correctly.${aiOn()?" An AI tool is available for each task.":""}</p>
     <div class="legend">${["label","note","pump"].map(t=>`<div class="t-${t}"><span class="sw">${ICON[t]}</span>${M[t].legend}</div>`).join("")}</div>
     <form class="idform" id="startForm" novalidate>
       <button class="btn go" type="submit">Begin</button>
